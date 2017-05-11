@@ -43,6 +43,7 @@ from vdsm.virt import recovery
 from vdsm.virt import secret
 from vdsm.virt import vmstatus
 from vdsm.virt.vmchannels import Listener
+from vdsm.virt.vmdevices.storage import DISK_TYPE
 from vdsm.virt.utils import isVdsmImage
 import libvirt
 from vdsm import alignmentScan
@@ -334,11 +335,18 @@ class clientIF(object):
                 if res['status']['code']:
                     raise vm.VolumeError(drive)
 
-                volPath = res['path']
                 # The order of imgVolumesInfo is not guaranteed
                 drive['volumeChain'] = res['imgVolumesInfo']
                 drive['volumeInfo'] = res['info']
-
+                # Not applicable for Ceph network disk as
+                # Ceph disks are not vdsm images
+                if drive.get('diskType') == DISK_TYPE.NETWORK:
+                    volinfo = res['info']
+                    volPath = volinfo['path']
+                    drive['protocol'] = volinfo['protocol']
+                    drive['hosts'] = volinfo['hosts']
+                else:
+                    volPath = res['path']
             # GUID drive format
             elif "GUID" in drive:
                 res = self.irs.getDevicesVisibility([drive["GUID"]])
